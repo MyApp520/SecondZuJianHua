@@ -1,0 +1,83 @@
+本案例：使用dagger2-android
+
+步骤：
+
+    1、在公共库里面定义三个@Scope类型的注解符：AppScope，ActivityScope，FragmentScope；
+
+    2、在公共库里面，建立BaseApplication, BaseModule, BaseComponent;
+        1）BaseModule里面使用@Singleton注解符标识全局单例，所有的全局单例都写在这；
+        2）BaseComponent使用BaseModule;
+        3）在BaseApplication里面获取BaseComponent实例对象
+            获取方式：BaseComponent baseComponent = DaggerBaseComponent.builder().baseModule(new BaseModule(getApplicationContext())).build();
+
+    3、在各个子模块里面定义用于管理activity和fragment的module：
+        比如：chat模块里面需要定义两个类：ChatModuleAllActivityModule（管理activity）、ChatModuleAllFragmentModule（管理fragment）；
+             除了公共库，其他子模块都需要按照这种方式定义好这两个类；
+
+    4、在主模块里面定义AppActivityModule和AppFragmentModule，它们有两个作用：
+        1）管理主模块的activity和fragment；
+        2）AppActivityModule通过includes的方式包含管理子模块activity的module；
+
+            @Module(includes = {
+                    //包含管理子模块activity的module；
+
+                    ChatModuleAllActivityModule.class,
+                    GroupModuleAllActivityModule.class,
+                    FindModuleAllActivityModule.class,
+                    MineModuleAllActivityModule.class})
+            public abstract class AppActivityModule {
+                //管理主模块的activity
+                @ActivityScope
+                @ContributesAndroidInjector
+                abstract MainActivity provideMainActivity();
+
+                @ActivityScope
+                @ContributesAndroidInjector
+                abstract LoginActivity provideLoginActivity();
+            }
+
+        3）AppFragmentModule通过includes的方式包含管理子模块fragment的module；
+
+            @Module(includes = {
+                    //包含管理子模块fragment的module；
+                    ChatModuleAllFragmentModule.class,
+                    GroupModuleAllFragmentModule.class,
+                    FindModuleAllFragmentModule.class,
+                    MineModuleAllFragmentModule.class})
+            public abstract class AppFragmentModule {
+                //管理主模块的fragment；
+
+                @FragmentScope
+                @ContributesAndroidInjector
+                abstract ChatMainFragment provideChatMainFragment();
+
+                @FragmentScope
+                @ContributesAndroidInjector
+                abstract GroupMainFragment provideGroupMainFragment();
+
+                @FragmentScope
+                @ContributesAndroidInjector
+                abstract FindMainFragment provideFindMainFragment();
+
+                @FragmentScope
+                @ContributesAndroidInjector
+                abstract MineMainFragment provideMineMainFragment();
+            }
+
+
+
+    5、在主模块里面定义AppComponent：
+        @AppScope
+        @Component(modules = {
+                AndroidInjectionModule.class,
+                AndroidSupportInjectionModule.class,
+                AppActivityModule.class,
+                AppFragmentModule.class}, dependencies = {BaseComponent.class})
+        public interface AppComponent {
+            void inject(MyApplication myApplication);
+        }
+
+    6、在主模块里面定义MyApplication：
+    public class MyApplication extends BaseApplication implements HasActivityInjector,
+            HasSupportFragmentInjector, HasServiceInjector, HasBroadcastReceiverInjector, HasContentProviderInjector {}
+
